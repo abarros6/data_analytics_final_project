@@ -20,6 +20,19 @@ This project focuses on applying machine learning techniques to analyze EEG (ele
 - `src/` - Source code and utility functions
 - `results/` - Output files, visualizations, and results
 
+## References and Potential data sets: 
+
+https://www.kaggle.com/datasets/samnikolas/eeg-dataset 
+
+From marta in lab meeting: 
+
+https://arxiv.org/pdf/2108.01030
+
+https://github.com/openlists/ElectrophysiologyData
+
+https://github.com/meagmohit/EEG-Datasets
+
+
 ## Getting Started
 
 1. Clone this repository
