@@ -1,6 +1,6 @@
 # EEG Data Analytics Final Project
 
-A machine learning project analyzing EEG data for the Data Analytics Foundations course.
+A machine learning project analyzing EEG data for seizure prediction using the Siena Scalp EEG Database.
 
 ## Team Members
 
@@ -10,32 +10,282 @@ A machine learning project analyzing EEG data for the Data Analytics Foundations
 
 ## Project Overview
 
-This project focuses on applying machine learning techniques to analyze EEG (electroencephalography) data.
+This project applies machine learning techniques to EEG (electroencephalography) data for **seizure prediction**. We aim to predict preictal (pre-seizure) states from scalp EEG recordings, enabling the development of wearable monitoring and intervention devices for epilepsy patients.
 
-## Project Structure
+The core problem is a **binary classification task**: given a window of multi-channel EEG data, predict whether the patient is in a preictal state (leading to seizure) or an interictal state (non-seizure).
 
-- `data/` - Raw and processed data files
-- `models/` - Trained machine learning models
-- `notebooks/` - Jupyter notebooks for exploration and analysis
-- `src/` - Source code and utility functions
-- `results/` - Output files, visualizations, and results
+### Dataset
 
-## References and Potential data sets: 
+**Siena Scalp EEG Database v1.0.0**
+- **Source**: https://physionet.org/content/siena-scalp-eeg/1.0.0/
+- **Size**: ~20 GB (128 hours of continuous recording)
+- **Subjects**: 14 epilepsy patients (9 male, 5 female; ages 20-71)
+- **Seizures**: 47 documented seizure events across all recordings
+- **Sampling Rate**: 512 Hz
+- **Electrode Setup**: International 10-20 System (16-19 EEG channels per subject)
+- **Reference**: Detti et al. (2020). EEG Synchronization Analysis for Seizure Prediction. *Processes*, 8(7), 846. https://doi.org/10.3390/pr8070846
 
-https://www.kaggle.com/datasets/samnikolas/eeg-dataset 
-
-From marta in lab meeting: 
-
-https://arxiv.org/pdf/2108.01030
-
-https://github.com/openlists/ElectrophysiologyData
-
-https://github.com/meagmohit/EEG-Datasets
-
+The dataset includes expert clinical validation of seizure events and ILAE (International League Against Epilepsy) seizure classification, making it well-suited for developing and validating ML-based seizure prediction algorithms.
 
 ## Getting Started
 
-1. Clone this repository
-2. Install required dependencies (see requirements.txt) -> currently empty
-3. Download the dataset to the `data/` directory -> to be done on your device with the file in data/scripts/
-4. Run the notebooks to reproduce the analysis -> currently no notebooks.
+### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Key dependencies:
+- **mne**: EEG signal processing and EDF file handling
+- **scikit-learn**: Traditional ML models (Random Forest, SVM)
+- **torch**: Neural network implementations
+- **pandas, numpy, scipy**: Data manipulation and analysis
+
+### 2. Download and Process Data
+
+Download the Siena Scalp EEG Database from [PhysioNet](https://physionet.org/content/siena-scalp-eeg/1.0.0/) and extract to `data/raw/siena-scalp-eeg/`.
+
+Then run the preprocessing pipeline:
+
+```bash
+cd data/scripts
+python process_siena_data.py
+```
+
+This creates `data/processed/eeg_data.h5` containing:
+- `X`: Preprocessed EEG windows of shape (n_windows, n_channels, n_samples)
+- `y`: Binary labels (0=interictal, 1=preictal)
+
+### 3. Run Analysis
+
+```bash
+jupyter notebook notebooks/
+```
+
+---
+
+## Methodology
+
+### Data Preprocessing
+
+Before model training, EEG signals undergo several preprocessing steps:
+
+**Filtering**:
+- High-pass filter (0.5 Hz) to remove DC drift and slow artifacts
+- Low-pass filter (40 Hz) to remove muscle noise and high-frequency artifacts
+- Rationale: Clinically relevant seizure activity occurs in the 0.5-40 Hz range
+
+**Windowing**:
+- Continuous EEG is segmented into fixed-length windows (default: 30-120 seconds)
+- Window length trade-off: Longer windows provide more context but increase prediction latency
+- All channels are extracted simultaneously for each window
+
+**Exclusion**:
+- Ictal and early postictal periods (during and immediately after seizure) are excluded from training
+- Rationale: These regions confound preictal prediction; we want to detect the preictal state *before* seizure onset
+
+**Standardization**:
+- Features are normalized per-channel using z-score normalization (mean=0, std=1)
+- Prevents models from learning channel-specific biases rather than true predictive patterns
+
+### Class Imbalance Considerations
+
+**The Problem**: 
+The dataset is highly imbalanced—interictal windows vastly outnumber preictal windows. With 47 seizures over 128 hours of recording, preictal windows (assuming 5-15 min before seizure) constitute only ~2-5% of the dataset.
+
+**Strategies to Handle Imbalance**:
+
+1. **Weighted Loss Functions** (Recommended for neural networks)
+   - Assign higher loss weight to minority (preictal) class
+   - PyTorch example: `torch.nn.BCEWithLogitsLoss(pos_weight=weight)`
+   - Weight ratio ≈ (n_interictal / n_preictal)
+
+2. **Class Weights in Tree Models** (For Random Forest/SVM)
+   - scikit-learn: `class_weight='balanced'` automatically adjusts for imbalance
+   - Penalizes minority class misclassification more heavily
+
+3. **SMOTE** (Synthetic Minority Over-sampling)
+   - Generate synthetic preictal samples via interpolation
+   - Apply only to training set; validate/test on real data
+   - Caution: Can lead to overfitting if not carefully applied
+
+4. **Threshold Adjustment**
+   - Default classification threshold is 0.5; can adjust based on desired sensitivity/specificity
+   - For seizure prediction, high sensitivity (catch all seizures) may be prioritized
+
+5. **Stratified Train/Test Split**
+   - Ensure train/val/test sets maintain original class distribution
+   - Prevents training set with too few positive examples
+
+
+## Train Phase
+
+### Models to Evaluate
+
+#### 1. Baseline: Hand-Crafted Features + Traditional ML
+
+**Feature Extraction** (from raw EEG):
+- **Spectral Power**: Power in frequency bands (delta: 0.5-4 Hz, theta: 4-8 Hz, alpha: 8-12 Hz, beta: 12-30 Hz, gamma: 30-40 Hz)
+- **Functional Connectivity**: Cross-frequency coupling, phase synchronization between channels
+- **Hjorth Parameters**: Activity, mobility, complexity of signal
+- **Entropy Measures**: Approximate Entropy, Sample Entropy
+- **Statistical**: Mean, variance, skewness, kurtosis per channel
+
+**Models**:
+- **Random Forest** (100-500 trees, max_depth tunable)
+  - Advantages: Fast, interpretable feature importance, handles imbalance with class weights
+  - Baseline for comparison; often outperforms more complex models on tabular data
+  
+- **Support Vector Machine** (RBF kernel)
+  - Advantages: Good generalization, naturally handles imbalance with `class_weight='balanced'`
+  - Disadvantages: Slower to train, less interpretable
+  
+- **Logistic Regression** (with L2 regularization)
+  - Advantages: Provides probability estimates, simple baseline
+  - Disadvantages: Assumes linear decision boundary
+
+#### 2. Temporal Neural Networks
+
+**LSTM/GRU** (Recurrent Networks):
+- **Architecture**: Multi-layer LSTM processing 16-19 channels sequentially
+- **Rationale**: Captures temporal dependencies in EEG; "remembers" relevant patterns from prior timesteps
+- **Hyperparameters**: Hidden size (64-512), num layers (1-3), dropout (0.2-0.5)
+- **Input**: (batch, seq_len, n_channels) where seq_len is number of timesteps
+
+
+### Training Strategy
+
+1. **Start Simple**: Baseline → Traditional ML → LSTM/TCN
+2. **Patient-Specific Models**: Train separate models per subject (as literature recommends)
+   - Seizure patterns vary significantly across patients
+   - Better performance but less generalizable
+   
+3. **Loss Functions**:
+   - Classification: Binary cross-entropy with class weights
+   - Focal loss (if standard BCE doesn't converge): `FL(pt) = -α(1-pt)^γ log(pt)`
+   - Addresses class imbalance more explicitly than weighting
+
+4. **Optimization**:
+   - Adam optimizer with learning rate 1e-3 to 1e-4
+   - Early stopping based on validation metric (AUC-ROC preferred over accuracy)
+
+---
+
+## Validation Phase
+
+### Hyperparameter Tuning Strategy
+
+Validate on a held-out validation set (e.g., 20% of data for each patient) **before** final test evaluation.
+
+#### Hyperparameters by Model Type
+
+**Random Forest**:
+- `n_estimators`: [100, 300, 500]
+- `max_depth`: [10, 20, None]
+- `min_samples_split`: [2, 5, 10]
+- `min_samples_leaf`: [1, 2, 4]
+- Method: GridSearchCV with stratified 5-fold cross-validation
+
+**SVM (RBF Kernel)**:
+- `C`: [0.1, 1, 10, 100]
+- `gamma`: [0.001, 0.01, 0.1, 'scale']
+- Method: GridSearchCV with stratified 5-fold CV
+- Note: Scale features before SVM
+
+**LSTM/GRU**:
+- `hidden_size`: [64, 128, 256, 512]
+- `num_layers`: [1, 2, 3]
+- `dropout`: [0.1, 0.3, 0.5]
+- `learning_rate`: [1e-2, 1e-3, 1e-4]
+- `batch_size`: [16, 32, 64]
+- Method: Random search (more efficient than grid) or Optuna for Bayesian optimization
+
+**Temporal CNN**:
+- `kernel_size`: [3, 5, 7, 15]
+- `num_filters`: [32, 64, 128, 256]
+- `dilation`: [1, 2, 4]
+- `learning_rate`: [1e-2, 1e-3, 1e-4]
+- Method: Similar to LSTM; use multiple kernel sizes in parallel
+
+### Early Stopping
+
+For neural networks:
+```python
+# Stop training if validation AUC doesn't improve for N epochs
+early_stopping = EarlyStopping(metric='auc', patience=15, mode='max')
+```
+
+Monitor validation loss/metrics every epoch; save best model weights.
+
+---
+
+## Test Phase
+
+### Test Set Evaluation
+
+**Setup**:
+- Hold out a completely independent test set (e.g., last subject or specific time period per patient)
+- No information from test set used in preprocessing, feature engineering, or hyperparameter tuning
+- Test on raw, unseen EEG data with same preprocessing as train/val
+
+**Final Metrics** (report on test set):
+- ROC curve and AUC
+- Precision-recall curve and AUC
+- Confusion matrix
+- Classification report (precision, recall, F1 per class)
+- Sensitivity, specificity, and balanced accuracy
+- Prediction distribution (histogram of predicted probabilities)
+
+### Model Comparison -> example of how we intend to compare models. 
+
+Create a comparison table:
+
+| Model | ROC-AUC | F1-Score | Sensitivity | Specificity | Train Time | Inference Time |
+|-------|---------|----------|-------------|-------------|-----------|-----------------|
+| Random Forest | 0.85 | 0.72 | 0.80 | 0.84 | 5s | 0.01s |
+| SVM | 0.87 | 0.74 | 0.82 | 0.86 | 120s | 0.05s |
+| LSTM | 0.90 | 0.78 | 0.85 | 0.89 | 300s | 0.02s |
+| Temporal CNN | 0.91 | 0.79 | 0.87 | 0.90 | 250s | 0.01s |
+
+### Error Analysis -> this depends on how we handle the class imbalances by the time we have chosen our learning approach
+
+- **False Positives**: When does model incorrectly predict seizure? (Patient burden)
+- **False Negatives**: When does model miss real seizures? (Safety risk)
+- **Per-Patient Performance**: Does one model work well for all patients or are patient-specific models needed?
+- **Temporal Patterns**: Do errors cluster at specific times (e.g., sleep vs. awake)?
+
+## Running the Project
+
+### Quick Start -> This is intended (my opinionated) usage but depends on our implementation
+
+```bash
+# 1. Preprocess data
+cd data/scripts
+python process_siena_data.py
+
+# 2. Run baseline models
+cd ../../notebooks
+jupyter notebook 02_baseline_models.ipynb
+
+# 3. Train neural networks
+jupyter notebook 03_neural_networks.ipynb
+
+# 4. Analyze results
+jupyter notebook 04_results_analysis.ipynb
+```
+
+## References
+
+### Dataset
+- Detti, P. (2020). Siena Scalp EEG Database (version 1.0.0). *PhysioNet*. https://doi.org/10.13026/5d4a-j060
+- Original paper: Detti et al. (2020). EEG Synchronization Analysis for Seizure Prediction. *Processes*, 8(7), 846.
+
+### EEG Signal Processing
+- MNE-Python documentation: https://mne.tools/
+- Teplan, M. (2002). Fundamentals of EEG measurement. *Measurement Science Review*, 2(2), 1-11.
+
+### Seizure Prediction Literature
+- Mormann et al. (2007). Seizure prediction: the long and winding road. *Brain*, 130(2), 314-326.
+- Khan & Gotman (2003). Comprehensive seizure detection hardware implementations. *IEEE Engineering in Medicine and Biology Magazine*, 22(1), 75-89.
+
+
