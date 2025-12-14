@@ -98,6 +98,25 @@ models/*.joblib
 *.fif
 *.set
 
+# Downloaded dataset and processed data
+data/raw/physionet.org/
+data/raw/siena-scalp-eeg/
+data/processed/
+data/interim/
+
+# Script generated outputs
+data/processed/eeg_windows.csv
+data/processed/*.csv
+data/processed/*.h5
+data/processed/*.hdf5
+data/processed/*.parquet
+
+# Any downloaded archives
+data/raw/*.zip
+data/raw/*.tar.gz
+data/raw/*.tar
+data/raw/*.gz
+
 # IDE
 .vscode/
 .idea/

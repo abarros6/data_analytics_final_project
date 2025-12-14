@@ -43,18 +43,22 @@ Key dependencies:
 
 ### 2. Download and Process Data
 
-Download the Siena Scalp EEG Database from [PhysioNet](https://physionet.org/content/siena-scalp-eeg/1.0.0/) and extract to `data/raw/siena-scalp-eeg/`.
-
-Then run the preprocessing pipeline:
-
+**Download the Dataset:**
 ```bash
-cd data/scripts
-python process_siena_data.py
+python data/scripts/download_data.py --setup-dirs
 ```
 
-This creates `data/processed/eeg_data.h5` containing:
-- `X`: Preprocessed EEG windows of shape (n_windows, n_channels, n_samples)
-- `y`: Binary labels (0=interictal, 1=preictal)
+**Test Data Loading (test this first):**
+```bash
+python data/scripts/convert_edf_to_csv.py --test-loading
+```
+
+**Convert EDF to ML-Ready CSV:**
+```bash
+python data/scripts/convert_edf_to_csv.py
+```
+
+This creates `data/processed/eeg_windows.csv` containing preprocessed, labeled EEG windows.
 
 ### 3. Run Analysis
 
@@ -66,27 +70,98 @@ jupyter notebook notebooks/
 
 ## Methodology
 
-### Data Preprocessing
+### Data Preprocessing Pipeline
 
-Before model training, EEG signals undergo several preprocessing steps:
+Our `convert_edf_to_csv.py` script implements comprehensive preprocessing with the following steps:
 
-**Filtering**:
-- High-pass filter (0.5 Hz) to remove DC drift and slow artifacts
-- Low-pass filter (40 Hz) to remove muscle noise and high-frequency artifacts
-- Rationale: Clinically relevant seizure activity occurs in the 0.5-40 Hz range
+#### 1. **Data Loading & Channel Selection**
+- **EDF File Loading**: Uses MNE library for robust EDF parsing
+- **Channel Filtering**: Automatically excludes non-EEG channels (EKG, annotations)
+  - Keeps 29 EEG channels per subject (Fp1, F3, C3, P3, O1, F7, T3, T5, etc.)
+  - Excludes EKG channels 33-34 to prevent model from learning cardiac patterns
+- **Sampling Rate**: Preserves original 512 Hz sampling rate
+- **Error Handling**: Graceful handling of corrupted or missing files
 
-**Windowing**:
-- Continuous EEG is segmented into fixed-length windows (default: 30-120 seconds)
-- Window length trade-off: Longer windows provide more context but increase prediction latency
-- All channels are extracted simultaneously for each window
+#### 2. **Signal Preprocessing**
+- **Bandpass Filtering**: 0.5-40 Hz using MNE's FIR filter
+  - **High-pass (0.5 Hz)**: Removes DC drift and very slow artifacts
+  - **Low-pass (40 Hz)**: Removes muscle noise, line noise, and high-frequency artifacts
+  - **Rationale**: Clinically relevant seizure activity occurs in 0.5-40 Hz range
+  - **Implementation**: `raw.filter(0.5, 40.0, fir_design='firwin')`
 
-**Exclusion**:
-- Ictal and early postictal periods (during and immediately after seizure) are excluded from training
-- Rationale: These regions confound preictal prediction; we want to detect the preictal state *before* seizure onset
+#### 3. **Temporal Windowing**
+- **Fixed Windows**: 30-second segments (configurable: `--window-size`)
+- **Non-overlapping**: Default stride = window size (configurable: `--stride`)
+- **Window Trade-offs**:
+  - Shorter windows: Lower latency, less context, more samples
+  - Longer windows: Higher latency, more context, fewer samples
+- **Time Alignment**: Each window tagged with start/end timestamps
 
-**Standardization**:
-- Features are normalized per-channel using z-score normalization (mean=0, std=1)
-- Prevents models from learning channel-specific biases rather than true predictive patterns
+#### 4. **Seizure-Based Labeling**
+- **Label Classes**:
+  - `0`: **Interictal** (normal, non-seizure periods)
+  - `1`: **Preictal** (5 minutes before seizure onset, configurable: `--preictal-window`)
+- **Exclusion Strategy**:
+  - **Ictal periods**: During seizure events (completely excluded)
+  - **Early postictal**: Immediately after seizures (excluded to avoid confounding)
+- **Time Parsing**: Robust parsing of `h.m.s` format from seizure annotation files
+- **Multi-seizure Handling**: Processes multiple seizures per subject/file
+
+#### 5. **Normalization & Feature Engineering**
+- **Z-score Normalization**: Applied per channel, per window
+  - Formula: `(x - mean(x)) / std(x)` for each channel in each window
+  - **Prevents**: Channel-specific amplitude biases
+  - **Ensures**: Model learns patterns, not absolute amplitudes
+- **Feature Format**: Each time sample becomes a feature column
+  - Column naming: `{channel}_t{timepoint}` (e.g., `Fp1_t0`, `Fp1_t1`, ...)
+  - For 30s @ 512Hz: 15,360 samples × 29 channels = 445,440 features per window
+
+#### 6. **Quality Control & Validation**
+- **Missing Data**: Handles subjects with missing EDF or seizure files
+- **Progress Tracking**: Real-time processing status per subject
+- **Statistics**: Reports total windows, class distribution, processing errors
+- **Memory Management**: Efficient processing of large datasets
+- **Reproducibility**: Consistent preprocessing across all subjects
+
+#### 7. **Output Format**
+- **CSV Structure**:
+  ```
+  subject_id | file | window_start_sec | window_end_sec | Fp1_t0 | Fp1_t1 | ... | label
+  PN00      | PN00-1.edf | 0.0 | 30.0 | -0.23 | 0.41 | ... | 0
+  ```
+- **Metadata Columns**: Subject ID, source file, temporal boundaries
+- **Feature Columns**: Normalized EEG samples (445,440 columns for 30s windows)
+- **Target Column**: Binary label for classification
+
+#### 8. **Configurable Parameters**
+All preprocessing steps are configurable via command-line arguments:
+
+```bash
+python data/scripts/convert_edf_to_csv.py \
+    --window-size 30 \          # Window length in seconds
+    --preictal-window 300 \     # Preictal period (5 min)
+    --filter-low 0.5 \          # High-pass filter cutoff
+    --filter-high 40.0 \        # Low-pass filter cutoff
+    --stride 30 \               # Window stride (overlap control)
+    --data-dir data/raw/siena-scalp-eeg \
+    --output data/processed/eeg_windows.csv
+```
+
+#### 9. **Preprocessing Validation**
+- **Test Mode**: `--test-loading` validates preprocessing without saving
+- **Sample Output**: Shows channel count, feature dimensions, class distribution
+- **Memory Estimation**: Reports DataFrame size and memory usage
+- **Format Verification**: Confirms column structure and data types
+
+#### 10. **Class Imbalance Considerations**
+The preprocessing automatically handles the natural class imbalance:
+- **Expected Distribution**: ~95-98% interictal, ~2-5% preictal windows
+- **Preservation**: Natural imbalance preserved for realistic evaluation
+- **Downstream Handling**: Imbalance addressed in model training phase via:
+  - Weighted loss functions
+  - SMOTE oversampling
+  - Stratified train/val/test splits
+  - Threshold optimization
 
 ### Class Imbalance Considerations
 
@@ -256,22 +331,21 @@ Create a comparison table:
 
 ## Running the Project
 
-### Quick Start -> This is intended (my opinionated) usage but depends on our implementation
+### Quick Start
 
 ```bash
-# 1. Preprocess data
-cd data/scripts
-python process_siena_data.py
+# 1. Download dataset (test mode first)
+python data/scripts/download_data.py --test
+python data/scripts/download_data.py --setup-dirs  # Full download
 
-# 2. Run baseline models
-cd ../../notebooks
-jupyter notebook 02_baseline_models.ipynb
+# 2. Test preprocessing pipeline
+python data/scripts/convert_edf_to_csv.py --test-loading
 
-# 3. Train neural networks
-jupyter notebook 03_neural_networks.ipynb
+# 3. Convert EDF to ML-ready CSV
+python data/scripts/convert_edf_to_csv.py
 
-# 4. Analyze results
-jupyter notebook 04_results_analysis.ipynb
+# 4. Run analysis
+jupyter notebook notebooks/01_exploratory_analysis.ipynb
 ```
 
 ## References
