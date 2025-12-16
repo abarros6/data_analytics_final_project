@@ -17,7 +17,8 @@ import mne
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 import argparse
-from scipy.stats import zscore
+from scipy.stats import zscore, skew, kurtosis
+from scipy.signal import welch
 
 
 class EEGDataConverter:
@@ -64,7 +65,7 @@ class EEGDataConverter:
         # Ensure output directory exists
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
     
-    def parse_seizure_times(self, seizure_file: Path) -> List[Tuple[float, float]]:
+    def parse_seizure_times(self, seizure_file: Path) -> Dict[str, List[Tuple[float, float]]]:
         """
         Parse seizure times from the Seizures-list-PNxx.txt file.
         
@@ -72,33 +73,49 @@ class EEGDataConverter:
             seizure_file: Path to the seizure list file
             
         Returns:
-            List of tuples (start_time_sec, end_time_sec) for each seizure
+            Dictionary mapping EDF filenames to list of (start_sec, end_sec) tuples
         """
-        seizures = []
+        file_seizures = {}
         
         try:
             with open(seizure_file, 'r') as f:
-                content = f.read()
+                lines = f.readlines()
             
-            # Look for time patterns like "10.23.45" (hours.minutes.seconds)
-            time_pattern = r'(\d+)\.(\d+)\.(\d+)'
-            matches = re.findall(time_pattern, content)
+            current_file = None
+            reg_start_sec = None
+            seizure_start_abs = None
             
-            # Convert pairs of times to start/end seizure times
-            for i in range(0, len(matches), 2):
-                if i + 1 < len(matches):
-                    start_h, start_m, start_s = map(int, matches[i])
-                    end_h, end_m, end_s = map(int, matches[i + 1])
+            for line in lines:
+                line = line.strip()
+                
+                if "File name:" in line:
+                    current_file = line.split("File name:")[1].strip()
+                    if current_file not in file_seizures:
+                        file_seizures[current_file] = []
+                        
+                elif "Registration start time:" in line:
+                    reg_start_time = line.split("Registration start time:")[1].strip()
+                    reg_start_sec = self.time_to_seconds(reg_start_time)
                     
-                    start_sec = start_h * 3600 + start_m * 60 + start_s
-                    end_sec = end_h * 3600 + end_m * 60 + end_s
+                elif "Seizure start time:" in line:
+                    seizure_start_time = line.split("Seizure start time:")[1].strip()
+                    seizure_start_abs = self.time_to_seconds(seizure_start_time)
                     
-                    seizures.append((start_sec, end_sec))
+                elif "Seizure end time:" in line and current_file and reg_start_sec is not None:
+                    seizure_end_time = line.split("Seizure end time:")[1].strip()
+                    seizure_end_abs = self.time_to_seconds(seizure_end_time)
+                    
+                    # Convert to relative time from start of recording
+                    start_rel = seizure_start_abs - reg_start_sec
+                    end_rel = seizure_end_abs - reg_start_sec
+                    
+                    if start_rel >= 0 and end_rel > start_rel:
+                        file_seizures[current_file].append((start_rel, end_rel))
         
         except Exception as e:
             self.stats['errors'].append(f"Error parsing seizure file {seizure_file}: {e}")
         
-        return seizures
+        return file_seizures
     
     def time_to_seconds(self, time_str: str) -> float:
         """Convert time string in format h.m.s to seconds."""
@@ -107,6 +124,56 @@ class EEGDataConverter:
             h, m, s = map(int, parts)
             return h * 3600 + m * 60 + s
         return 0.0
+    
+    def extract_features(self, window_data: np.ndarray, sfreq: float, ch_names: List[str]) -> Dict[str, float]:
+        """
+        Extract engineered features from EEG window data.
+        
+        Args:
+            window_data: EEG data array (n_channels, n_timepoints)
+            sfreq: Sampling frequency
+            ch_names: Channel names
+            
+        Returns:
+            Dictionary of engineered features
+        """
+        features = {}
+        n_channels, n_timepoints = window_data.shape
+        
+        # Frequency bands (Hz)
+        bands = {
+            'delta': (0.5, 4),
+            'theta': (4, 8), 
+            'alpha': (8, 12),
+            'beta': (12, 30),
+            'gamma': (30, 40)
+        }
+        
+        for ch_idx, ch_name in enumerate(ch_names):
+            channel_data = window_data[ch_idx, :]
+            
+            # Statistical features
+            features[f'{ch_name}_mean'] = np.mean(channel_data)
+            features[f'{ch_name}_std'] = np.std(channel_data)
+            features[f'{ch_name}_skew'] = skew(channel_data)
+            features[f'{ch_name}_kurtosis'] = kurtosis(channel_data)
+            
+            # Power spectral density
+            try:
+                freqs, psd = welch(channel_data, fs=sfreq, nperseg=min(256, len(channel_data)//4))
+                
+                # Extract power in each frequency band
+                for band_name, (low_freq, high_freq) in bands.items():
+                    mask = (freqs >= low_freq) & (freqs <= high_freq)
+                    band_power = np.trapz(psd[mask], freqs[mask]) if np.any(mask) else 0
+                    features[f'{ch_name}_{band_name}_power'] = band_power
+                    
+            except Exception as e:
+                # Fallback: set band powers to 0 if PSD calculation fails
+                for band_name in bands.keys():
+                    features[f'{ch_name}_{band_name}_power'] = 0
+                    
+        return features
     
     def get_window_label(self, window_start: float, window_end: float, 
                         seizures: List[Tuple[float, float]]) -> int:
@@ -203,7 +270,7 @@ class EEGDataConverter:
             # Extract window data
             window_data = data[:, start_idx:end_idx]
             
-            # Normalize each channel (z-score)
+            # Normalize each channel (z-score) 
             window_data_norm = np.zeros_like(window_data)
             for ch_idx in range(n_channels):
                 channel_data = window_data[ch_idx, :]
@@ -212,7 +279,7 @@ class EEGDataConverter:
                 else:
                     window_data_norm[ch_idx, :] = channel_data
             
-            # Create feature dictionary
+            # Create feature dictionary with metadata
             window_dict = {
                 'subject_id': subject_id,
                 'file': file_name,
@@ -221,11 +288,9 @@ class EEGDataConverter:
                 'label': label
             }
             
-            # Add channel data as columns
-            for ch_idx, ch_name in enumerate(raw.ch_names):
-                for sample_idx in range(n_samples_window):
-                    col_name = f"{ch_name}_t{sample_idx}"
-                    window_dict[col_name] = window_data_norm[ch_idx, sample_idx]
+            # Extract engineered features instead of raw samples
+            features = self.extract_features(window_data_norm, sfreq, raw.ch_names)
+            window_dict.update(features)
             
             windows.append(window_dict)
             
@@ -260,7 +325,7 @@ class EEGDataConverter:
             return []
         
         seizure_file = seizure_files[0]
-        seizures = self.parse_seizure_times(seizure_file)
+        file_seizures = self.parse_seizure_times(seizure_file)
         
         # Find EDF files
         edf_files = list(subject_dir.glob("*.edf"))
@@ -278,6 +343,9 @@ class EEGDataConverter:
             raw = self.load_and_preprocess_edf(edf_file)
             if raw is None:
                 continue
+            
+            # Get seizures for this specific file
+            seizures = file_seizures.get(edf_file.name, [])
             
             # Create windows
             windows = self.create_windows(raw, seizures, subject_id, edf_file.name)
