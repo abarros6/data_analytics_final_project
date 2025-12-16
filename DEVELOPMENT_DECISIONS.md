@@ -15,17 +15,20 @@
 
 **Impact**: Reduced scope but allows proof-of-concept completion
 **Team Discussion Needed**: Scale-up strategy for full dataset
+**Status**: ✅ IMPLEMENTED - Successfully tested with PN00 patient
 
 ### 2. Feature Engineering Priority
 **Decision**: Implement engineered features instead of raw samples  
 **Reason**: 
 - Raw approach: 445,440 features per window
-- Engineered approach: ~150 features per window (99.9% reduction)
-- Spectral power (5 bands × ~17 channels = 85 features)
-- Statistical features (4 stats × ~17 channels = 68 features)
+- Engineered approach: ~153 features per window (99.9% reduction)
+- Spectral power (5 bands × ~34 channels = 170 features)
+- Statistical features (4 stats × ~34 channels = 136 features)
+- Actual: 306 features total (34 channels × 9 features each)
 
-**Impact**: Massive memory reduction, faster training
+**Impact**: Massive memory reduction (1700x), faster training
 **Team Discussion Needed**: Validate feature selection maintains predictive power
+**Status**: ✅ IMPLEMENTED - Successfully tested with real EDF data
 
 ### 3. Patient Selection Strategy
 **Decision**: Start with PN00, PN01, PN03 (patients with confirmed seizures)  
