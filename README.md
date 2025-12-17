@@ -2,7 +2,7 @@
 
 ## 🎯 PROJECT STATUS: ACADEMIC EXERCISE WITH LIMITED GENERALIZATION
 
-This project demonstrates **proper machine learning validation methodology** for EEG seizure prediction using real patient data. While achieving good single-patient performance (0.983 ROC-AUC), the project reveals **significant generalization challenges** typical of medical ML with limited data.
+This project demonstrates **proper machine learning validation methodology** for EEG seizure prediction using a controlled dataset. While achieving reasonable cross-patient performance (0.696 ROC-AUC), the project reveals **significant generalization challenges** typical of medical ML with limited data.
 
 ## Team Members
 - Dylan Abbinett
@@ -107,7 +107,7 @@ models/           # Trained models (.pkl files)
 
 **Why Logistic Regression Over Other Models:**
 1. **Interpretability**: Medical applications require explainable predictions for regulatory approval
-2. **Small Sample Size**: Complex models (CNNs, LSTMs) would severely overfit with only 3 patients
+2. **Small Sample Size**: Complex models (CNNs, LSTMs) would severely overfit with only 5 patients
 3. **Feature Engineering**: Our 224 engineered features work well with linear models
 4. **Computational Efficiency**: Real-time seizure prediction needs fast inference (<1ms)
 5. **Baseline Requirement**: Industry standard to establish simple baselines first
