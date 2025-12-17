@@ -157,3 +157,55 @@ wandb/
 # TensorBoard
 runs/
 tensorboard_logs/
+
+# Generated results and figures
+results/
+figures/
+plots/
+output/
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+
+# Generated text outputs
+*.txt
+!README.txt
+!LICENSE.txt
+!requirements.txt
+
+# Markdown files except README
+*.md
+!README.md
+
+# Project tracking files (no longer tracked)
+PROJECT_EXECUTION_PLAN.md
+DEVELOPMENT_DECISIONS.md
+
+# Temporary and cache directories
+data/temp/
+data/cache/
+__pycache__/
+.cache/
+
+# Any generated datasets or processed files
+data/generated/
+data/output/
+
+# Jupyter notebook outputs
+*.ipynb_checkpoints/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Any experimental or test files
+test_*.py
+temp_*.py
+experimental_*.py
