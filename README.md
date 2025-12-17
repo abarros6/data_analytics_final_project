@@ -137,13 +137,32 @@ if seizure_end_time < seizure_start_time:
     seizure_end_time += timedelta(days=1)
 ```
 
+## 📊 Data Split Methodology
+
+### **Train/Validation/Test Split Configuration**
+- **Training Set**: 60% (used for model training and hyperparameter tuning)
+- **Validation Set**: 20% (used for model selection and performance monitoring)
+- **Test Set**: 20% (final unbiased evaluation - never used during development)
+
+### **Split Implementation Details**
+- **Patient-Level Splits**: No patient appears in multiple sets (prevents data leakage)
+- **Stratified Sampling**: Maintains seizure rate distribution across all splits
+- **Random State**: Fixed (42) for reproducible results
+- **Total Dataset**: 3 patients processed (PN00, PN01, PN02)
+- **Sample Sizes**:
+  - Primary patient (PN00): 84 total windows
+  - Training: ~50 windows, Validation: ~17 windows, Test: ~17 windows
+  - Cross-patient validation: 3 patients total
+
 ### **Validation Quality Checklist**
-- ✅ **Real EEG data only** (Siena patient PN00)
-- ✅ **Proper 3-way split** (Train: 45%, Validation: 15%, Test: 40%)
+- ✅ **Real EEG data only** (Siena patient PN00 + multi-patient validation)
+- ✅ **Proper 3-way split** (Train: 60%, Validation: 20%, Test: 20%)
+- ✅ **Patient-level splits** (no patient overlap between train/val/test sets)
 - ✅ **No information leakage** (test set never seen during development)
 - ✅ **Hyperparameter tuning** on train set only
 - ✅ **Model selection** using validation set
 - ✅ **Final evaluation** on unbiased test set
+- ✅ **Stratified sampling** (maintains seizure rate distribution)
 - ✅ **Realistic performance** (no overfitting indicators)
 
 ## ⚠️ Critical Limitations & Learning Outcomes
