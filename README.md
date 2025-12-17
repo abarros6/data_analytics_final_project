@@ -19,11 +19,12 @@ This project demonstrates **proper machine learning validation methodology** for
 - **Realistic performance assessment** - no impossible 100% accuracy claims
 
 ### ⚠️ **Limited Results with Poor Generalization**
-- **Dataset**: Siena Scalp EEG Database (PhysioNet) - Only 3 patients processed
-- **Single Patient Performance**: 0.983 ROC-AUC (PN00, 34 test windows)
-- **Cross-Patient Performance**: 0.827 ROC-AUC (16% degradation)
+- **Dataset**: Siena Scalp EEG Database (PhysioNet) - 5 patients processed (300 windows)
+- **Single Patient Performance**: 0.656 ROC-AUC (PN00, 34 test windows)
+- **Cross-Patient Performance**: 0.696 ROC-AUC (patient-level validation)
+- **New Patient Testing**: 0.581 ROC-AUC (16% degradation on unseen patient)
 - **Critical Limitation**: Poor generalization across patients
-- **Sample Size**: Insufficient for robust medical conclusions (3 patients total)
+- **Sample Size**: Small scale demonstration, not robust for medical conclusions
 
 ## 🚀 Quick Start
 
@@ -60,16 +61,16 @@ python scripts/predict_new_data.py --model-path models/[model_file]
 ### **Performance Results - Honest Assessment**
 | Phase | Performance | Sample Size | Limitation |
 |-------|-------------|-------------|------------|
-| Training CV | 0.909 ROC-AUC | Single patient | Overfitting risk |
-| Validation | 1.000 ROC-AUC | Tiny sample | Statistical noise |
-| **Single Patient Test** | **0.983 ROC-AUC** | **34 windows** | **Not generalizable** |
-| **Cross-Patient Test** | **0.827 ROC-AUC** | **3 patients** | **Poor generalization** |
+| Training CV | 0.675 ROC-AUC | Multi-patient | Limited by small dataset |
+| Validation | 0.586 ROC-AUC | Single patient | Patient-specific bias |
+| **Cross-Patient Test** | **0.696 ROC-AUC** | **5 patients** | **Limited generalization** |
+| **New Patient Test** | **0.581 ROC-AUC** | **Unseen patient** | **Poor generalization** |
 
 ### **Critical Performance Limitations**
-- **Sample Size**: 34 test windows insufficient for medical conclusions
-- **Generalization**: 16% performance drop across patients
-- **False Alarms**: 36% precision unacceptable for clinical use
-- **Statistical Power**: 3 patients inadequate for robust validation
+- **Sample Size**: 5 patients insufficient for robust medical conclusions
+- **Generalization**: 16% performance drop on completely new patients (0.696 → 0.581)
+- **Limited Scale**: 300 total windows vs thousands needed for clinical validation
+- **Statistical Power**: Small dataset inadequate for robust medical AI deployment
 
 ## 📁 Project Structure
 
@@ -148,11 +149,11 @@ if seizure_end_time < seizure_start_time:
 - **Patient-Level Splits**: No patient appears in multiple sets (prevents data leakage)
 - **Stratified Sampling**: Maintains seizure rate distribution across all splits
 - **Random State**: Fixed (42) for reproducible results
-- **Total Dataset**: 3 patients processed (PN00, PN01, PN02)
+- **Total Dataset**: 5 patients processed (PN00, PN01, PN03, PN05, PN06)
 - **Sample Sizes**:
-  - Primary patient (PN00): 84 total windows
-  - Training: ~50 windows, Validation: ~17 windows, Test: ~17 windows
-  - Cross-patient validation: 3 patients total
+  - Total windows: 300 across all patients
+  - Training: 3 patients (190 windows), Validation: 1 patient (60 windows), Test: 1 patient (50 windows)
+  - Cross-patient validation: Proper patient-level splits implemented
 
 ### **Validation Quality Checklist**
 - ✅ **Real EEG data only** (Siena patient PN00 + multi-patient validation)
@@ -169,7 +170,7 @@ if seizure_end_time < seizure_start_time:
 
 ### **Generalization Challenges Revealed**
 - **Patient Specificity**: Model learns individual patterns, not generalizable features
-- **Domain Shift**: Different patients have fundamentally different EEG signatures
+- **Domain Shift**: Different patients have fundamentally different EEG signatures (0.696 → 0.581 AUC drop)
 - **Scale Requirements**: Medical ML requires 100+ patients for robust conclusions
 - **Clinical Reality**: Poor cross-patient performance typical in medical AI
 
