@@ -102,6 +102,29 @@ models/           # Trained models (.pkl files)
 
 ## 🔬 Scientific Methodology
 
+### **Model Selection Rationale**
+
+**Why Logistic Regression Over Other Models:**
+1. **Interpretability**: Medical applications require explainable predictions for regulatory approval
+2. **Small Sample Size**: Complex models (CNNs, LSTMs) would severely overfit with only 3 patients
+3. **Feature Engineering**: Our 224 engineered features work well with linear models
+4. **Computational Efficiency**: Real-time seizure prediction needs fast inference (<1ms)
+5. **Baseline Requirement**: Industry standard to establish simple baselines first
+
+**Why NOT Deep Learning:**
+- **Insufficient Data**: Neural networks need thousands of patients, we have 3
+- **Overfitting Risk**: More parameters than data points = guaranteed overfitting
+- **Computational Cost**: CNNs/LSTMs require GPU resources for minimal gain on tiny datasets
+- **Black Box Problem**: Deep learning interpretability unsuitable for medical devices
+
+**Why NOT Other ML Models:**
+- **SVM**: Similar to logistic regression but less interpretable
+- **XGBoost**: Ensemble methods prone to overfitting with tiny datasets
+- **Decision Trees**: Too simplistic for complex EEG patterns
+- **Random Forest**: Tested but performed worse than logistic regression
+
+**Empirical Validation**: Cross-validation showed logistic regression consistently outperformed random forest on our limited dataset.
+
 ### **Critical Bug Fixed**
 **Problem**: Original seizure detection missed seizures that occurred after midnight due to day rollover parsing bug.
 
@@ -176,13 +199,45 @@ This project is designed for full reproducibility:
 
 ---
 
+---
+
+## 📚 Additional Documentation
+
+### **`PRESENTATION_GUIDE.md`** - Complete 15-Minute Academic Presentation
+- Slide-by-slide structure with timing and speaking notes
+- Technical challenges, methodology, and honest results assessment
+- Q&A preparation for realistic responses about limitations
+
+### **`REALISTIC_PROJECT_ASSESSMENT.md`** - Honest Project Evaluation  
+- Unbiased assessment of what was actually achieved
+- Why results aren't clinically viable despite good numbers
+- Academic value vs clinical deployment reality
+
+### **`PROJECT_SANITY_CHECK.md`** - Comprehensive Code Verification
+- Complete validation of code quality and results consistency
+- Technical soundness and presentation readiness assessment
+
+### **`seizure_prediction_benchmarks.md`** - Literature Comparison
+- Detailed comparison with published seizure prediction papers
+- Why patient-specific results align with clinical literature
+- Analysis of cross-patient generalization challenges
+
+### **`TECHNICAL_DOCUMENTATION.md`** - Implementation Details & Model Rationale
+- Comprehensive model selection justification 
+- Critical bug fixes and technical implementation details
+- Feature engineering pipeline and software architecture
+
+---
+
 ## 🎓 For New Claude Sessions
 
-**This project demonstrates proper ML methodology on medical data with realistic limitations. Key files for context:**
+**This project demonstrates proper ML methodology on medical data with realistic limitations.**
 
-1. **`REALISTIC_PROJECT_ASSESSMENT.md`** - Honest evaluation of limitations
-2. **`PRESENTATION_GUIDE.md`** - Academic presentation with critical assessment
-3. **`scripts/demo_proper_validation.py`** - Technical implementation
-4. **Reality**: Good single-patient results, poor generalization across patients
+**Key Files for Context:**
+1. **`PRESENTATION_GUIDE.md`** - Complete presentation structure and honest assessment
+2. **`REALISTIC_PROJECT_ASSESSMENT.md`** - Unbiased evaluation of clinical limitations  
+3. **`TECHNICAL_DOCUMENTATION.md`** - Model rationale and implementation details
+4. **`scripts/demo_proper_validation.py`** - Working validation demonstration
+5. **Reality**: Misleading single-patient results, poor cross-patient generalization
 
 **Status**: ✅ ACADEMIC LEARNING EXERCISE - Technical competence demonstrated, clinical limitations acknowledged
