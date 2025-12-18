@@ -1,6 +1,4 @@
-# EEG Seizure Prediction Project - FINAL
-
-## PROJECT STATUS: REAL SEIZURE PREDICTION USING CLINICAL DATA
+# EEG Seizure Prediction Project 
 
 This project implements **genuine seizure prediction** using real PhysioNet EEG signals and **authentic seizure timing** from clinical annotations. This represents a complete medical AI pipeline from raw clinical data to seizure prediction models.
 
