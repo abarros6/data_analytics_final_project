@@ -35,9 +35,7 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Add src to path for imports
-sys.path.append(str(Path(__file__).parent.parent / 'src'))
-from data_preprocessing import EEGPreprocessor
+# Removed external preprocessing dependency - self-contained implementation
 
 class SeizurePredictionService:
     def __init__(self, model_path: str):
@@ -52,12 +50,21 @@ class SeizurePredictionService:
         print(f"Loading model from {self.model_path}")
         model_data = joblib.load(self.model_path)
         
-        self.pipeline = model_data['pipeline']
-        self.model_info = {
-            'timestamp': model_data.get('timestamp'),
-            'model_type': model_data.get('model_type'),
-            'random_state': model_data.get('random_state')
-        }
+        if isinstance(model_data, dict):
+            self.pipeline = model_data['pipeline']
+            self.model_info = {
+                'timestamp': model_data.get('timestamp'),
+                'model_type': model_data.get('model_type'),
+                'random_state': model_data.get('random_state')
+            }
+        else:
+            # Direct pipeline model (new format)
+            self.pipeline = model_data
+            self.model_info = {
+                'timestamp': 'Unknown',
+                'model_type': str(type(model_data.named_steps[list(model_data.named_steps.keys())[-1]]).__name__),
+                'random_state': 'Unknown'
+            }
         
         print(f"Loaded {self.model_info['model_type']} model")
         print(f"Trained: {self.model_info['timestamp']}")
@@ -66,17 +73,12 @@ class SeizurePredictionService:
         """Extract features from an EDF file using the same preprocessing as training."""
         print(f"Processing EDF file: {edf_path}")
         
-        # Use the same preprocessing as training
-        preprocessor = EEGPreprocessor({
-            'window_size': window_size,
-            'overlap': overlap,
-            'target_freq': 256,
-            'filter_low': 0.5,
-            'filter_high': 40
-        })
-        
         # Load and preprocess the EDF file
         raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+        
+        # Basic preprocessing similar to training pipeline
+        raw.filter(l_freq=0.5, h_freq=40, verbose=False)
+        raw.resample(sfreq=256, verbose=False)
         
         # Extract windows and features
         windows_data = []
@@ -158,7 +160,7 @@ class SeizurePredictionService:
     def predict_from_features(self, features_df: pd.DataFrame) -> Dict:
         """Make predictions from extracted features."""
         # Remove metadata columns
-        feature_cols = [col for col in features_df.columns if col not in ['window_start', 'file_name', 'label', 'patient_id']]
+        feature_cols = [col for col in features_df.columns if col not in ['window_start', 'file_name', 'label', 'patient_id', 'subject_id', 'edf_file', 'window_start_sec', 'seizure_start_sec']]
         X = features_df[feature_cols].values
         
         # Make predictions
