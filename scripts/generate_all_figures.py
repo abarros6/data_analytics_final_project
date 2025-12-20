@@ -19,10 +19,12 @@ sns.set_palette("husl")
 def load_data_and_results():
     """Load the data and model comparison results."""
     
-    # Load processed data
-    data_path = "data/processed/real_seizure_targeted_data.csv"
+    # Load processed data - try new larger dataset first
+    data_path = "data/processed/seizure_data_60s.csv"
     if not Path(data_path).exists():
-        data_path = "data/processed/seizure_prediction_data.csv"
+        data_path = "data/processed/real_seizure_targeted_data.csv"
+        if not Path(data_path).exists():
+            data_path = "data/processed/seizure_prediction_data.csv"
     
     df = pd.read_csv(data_path)
     

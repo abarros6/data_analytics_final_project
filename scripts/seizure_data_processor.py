@@ -96,7 +96,7 @@ def extract_features(data, sfreq):
             features.extend([0, 0, 0, 0])
     return features
 
-def process_seizure_file(patient_dir, patient_id, seizure_info):
+def process_seizure_file(patient_dir, patient_id, seizure_info, preictal_window_sec=60):
     """Process specific EDF file containing seizure"""
     edf_path = patient_dir / seizure_info['edf_file']
     if not edf_path.exists():
@@ -117,10 +117,10 @@ def process_seizure_file(patient_dir, patient_id, seizure_info):
         
         raw.pick_channels(eeg_channels)
         
-        # Define time window around seizure (2 minutes before to 1 minute after)
+        # Define time window around seizure (10 minutes before to 5 minutes after)
         seizure_start = seizure_info['start_sec']
-        window_start = max(0, seizure_start - 120)  # 2 min before
-        window_end = min(raw.times[-1], seizure_start + 60)   # 1 min after
+        window_start = max(0, seizure_start - 600)  # 10 min before
+        window_end = min(raw.times[-1], seizure_start + 300)   # 5 min after
         
         # Crop to target window
         raw.crop(tmin=window_start, tmax=window_end)
@@ -145,8 +145,8 @@ def process_seizure_file(patient_dir, patient_id, seizure_info):
             features = extract_features(window_data, 256)
             
             # Real seizure labeling
-            # Preictal: 60 seconds before seizure start
-            preictal_start = seizure_start - 60
+            # Preictal: variable seconds before seizure start
+            preictal_start = seizure_start - preictal_window_sec
             preictal_end = seizure_start
             
             if preictal_start <= window_center < preictal_end:
@@ -196,7 +196,7 @@ def main():
         
         # Process each seizure-containing file
         for seizure_info in seizures:
-            windows = process_seizure_file(patient_dir, patient, seizure_info)
+            windows = process_seizure_file(patient_dir, patient, seizure_info, preictal_window_sec=60)
             all_windows.extend(windows)
     
     if all_windows:
