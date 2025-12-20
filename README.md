@@ -15,7 +15,6 @@ This project implements **genuine seizure prediction** using real PhysioNet EEG 
 - **528 EEG windows** with authentic preictal/interictal labels
 - **4 patients** with seizure prediction performance comparison
 - **Best Performance: 0.723 AUC** - Random Forest model
-- **Complete medical AI pipeline** from raw EEG to trained models
 
 ### Clinical Seizure Detection Results
 - **Dataset**: 4 patients (PN00, PN03, PN05, PN06) with documented seizures
@@ -24,16 +23,15 @@ This project implements **genuine seizure prediction** using real PhysioNet EEG 
 - **Best Performance**: 0.723 ± 0.058 ROC-AUC (Random Forest, leave-one-patient-out)
 - **Baseline Performance**: 0.605 ± 0.047 ROC-AUC (Logistic Regression)
 - **Patient Range**: 0.652 - 0.811 AUC (Random Forest, individual patterns)
-- **Medical AI**: Multiple algorithms for seizure prediction using clinical data
 
 ## Quick Start
 
-### 1. Download Real Dataset
+### 1. Download Dataset
 ```bash
 python data/scripts/download_data.py
 ```
 
-### 2. Process Seizure Data
+### 2. Preprocess Seizure Data
 ```bash
 python scripts/seizure_data_processor.py
 ```
@@ -45,13 +43,12 @@ python scripts/seizure_data_processor.py
 python scripts/model_comparison.py
 ```
 
-### 4. Generate Analysis Figures
+### 4. Generate Figures
 ```bash
-# Generate all analysis figures including confusion matrices and ROC curves
 python scripts/generate_all_figures.py
 ```
 
-### 5. Make Seizure Predictions (Best Model)
+### 5. Make Seizure Predictions (Selecting Best Model)
 ```bash
 python scripts/predict_new_data.py --model models/random_forest_seizure_model.pkl --csv data/processed/real_seizure_targeted_data.csv
 ```
@@ -61,7 +58,7 @@ python scripts/predict_new_data.py --model models/random_forest_seizure_model.pk
 ### **Real Seizure Prediction Framework**
 1. **Clinical Data Processing** - PhysioNet epilepsy patient recordings
 2. **Seizure Period Extraction** - Target windows around documented seizures
-3. **Real Label Assignment** - 60 seconds before seizure = preictal
+3. **Real Label Assignment** - 60 seconds before seizure = preictal (vary this window length for future works)
 4. **Feature Extraction** - Statistical features from 10 EEG channels
 5. **Patient-Level Splits** - No patient overlap between train/test
 6. **Cross-Patient Validation** - Leave-one-patient-out evaluation
@@ -88,7 +85,7 @@ Performance Improvement: +0.118 AUC over logistic regression
 
 ## Project Structure
 
-### **Streamlined Pipeline (4 Scripts)**
+### **Full Pipeline (4 Scripts)**
 ```
 scripts/
 ├── seizure_data_processor.py             # Process seizure periods from clinical data
@@ -102,9 +99,14 @@ data/scripts/
 
 ### **Seizure Data & Models**
 ```
-data/processed/
-├── real_seizure_targeted_data.csv        # 528 windows with clinical labels
-└── seizure_prediction_data.csv           # Legacy data file
+data/
+├── processed/
+│   ├── real_seizure_targeted_data.csv    # 528 windows with clinical labels
+│   └── seizure_prediction_data.csv       # Legacy data file
+├── raw/
+│   └── physionet.org/files/siena-scalp-eeg/1.0.0/  # Raw PhysioNet data
+└── scripts/
+    └── download_data.py                   # Data download script
 
 models/
 ├── seizure_prediction_model.pkl          # Logistic Regression model
@@ -139,16 +141,13 @@ results/figures/
 └── roc_curves_cv.png                     # Cross-validated ROC curves
 ```
 
-### **Documentation**
+### **Additional Files**
 ```
-├── PRESENTATION_GUIDE.md                 # 15-minute presentation structure
-├── REALISTIC_PROJECT_ASSESSMENT.md      # Honest clinical limitations
-├── TECHNICAL_DOCUMENTATION.md           # Implementation details
-├── PROJECT_SANITY_CHECK.md             # Code quality verification
-└── seizure_prediction_benchmarks.md     # Literature comparison
+├── requirements.txt                      # Python dependencies
+└── setup_venv.sh                        # Virtual environment setup script
 ```
 
-## Scientific Methodology
+## Methodology
 
 ### **Model Selection for Medical AI**
 

@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-"""
-Comprehensive Figure Generator
-=============================
-
-Creates all analysis figures:
-- Model comparison with AUC scores
-- Dataset distribution analysis
-- Cross-patient performance breakdown
-- ROC curves (with proper cross-validation to avoid overfitting)
-- Confusion matrices for each model
-- Performance metrics comparison
-
-Outputs to results/figures/ directory only.
-"""
 
 import pandas as pd
 import numpy as np
@@ -26,12 +12,12 @@ from sklearn.model_selection import cross_val_predict, StratifiedKFold
 import warnings
 warnings.filterwarnings('ignore')
 
-# Set style for clean figures
+# Set style
 plt.style.use('default')
 sns.set_palette("husl")
 
 def load_data_and_results():
-    """Load the actual data and model comparison results."""
+    """Load the data and model comparison results."""
     
     # Load processed data
     data_path = "data/processed/real_seizure_targeted_data.csv"
@@ -182,10 +168,10 @@ def create_cross_patient_performance_figure(results, output_dir):
     plt.savefig(output_dir / 'cross_patient_performance.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def create_proper_roc_curves_figure(df, output_dir):
-    """Create ROC curves using proper cross-validation to avoid overfitting."""
+def create_roc_curves_figure(df, output_dir):
+    """Create ROC curves - both simple and cross-validated versions."""
     
-    print("📊 Creating ROC curves with proper cross-validation...")
+    print("📊 Creating ROC curves...")
     
     # Load trained models
     lr_model = joblib.load('models/seizure_prediction_model.pkl')
@@ -197,8 +183,8 @@ def create_proper_roc_curves_figure(df, output_dir):
     X = df[feature_cols].values
     y = df['label'].values
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(10, 8))
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
     
     models = [
         ('Logistic Regression', lr_model, '#1f77b4'),
@@ -206,7 +192,30 @@ def create_proper_roc_curves_figure(df, output_dir):
         ('SVM RBF', svm_model, '#ff7f0e')
     ]
     
-    # Use cross-validation to get unbiased predictions
+    # First subplot: Simple ROC curves (may show overfitting)
+    for name, model, color in models:
+        # Get prediction probabilities
+        y_pred_proba = model.predict_proba(X)[:, 1]
+        
+        # Calculate ROC curve
+        fpr, tpr, _ = roc_curve(y, y_pred_proba)
+        roc_auc = auc(fpr, tpr)
+        
+        # Plot ROC curve
+        ax1.plot(fpr, tpr, color=color, lw=2, 
+               label=f'{name} (AUC = {roc_auc:.3f})')
+    
+    # Plot diagonal line
+    ax1.plot([0, 1], [0, 1], color='red', lw=2, linestyle='--', alpha=0.5)
+    ax1.set_xlim([0.0, 1.0])
+    ax1.set_ylim([0.0, 1.05])
+    ax1.set_xlabel('False Positive Rate')
+    ax1.set_ylabel('True Positive Rate')
+    ax1.set_title('ROC Curves - Training Set Performance\n(May show overfitting)')
+    ax1.legend(loc="lower right")
+    ax1.grid(True, alpha=0.3)
+    
+    # Second subplot: Cross-validated ROC curves (unbiased)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     
     for name, model, color in models:
@@ -218,19 +227,18 @@ def create_proper_roc_curves_figure(df, output_dir):
         roc_auc = auc(fpr, tpr)
         
         # Plot ROC curve
-        ax.plot(fpr, tpr, color=color, lw=2, 
+        ax2.plot(fpr, tpr, color=color, lw=2, 
                label=f'{name} (CV AUC = {roc_auc:.3f})')
     
     # Plot diagonal line
-    ax.plot([0, 1], [0, 1], color='red', lw=2, linestyle='--', alpha=0.5)
-    
-    ax.set_xlim([0.0, 1.0])
-    ax.set_ylim([0.0, 1.05])
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
-    ax.set_title('ROC Curves - Cross-Validated Performance\n(Avoiding Overfitting)')
-    ax.legend(loc="lower right")
-    ax.grid(True, alpha=0.3)
+    ax2.plot([0, 1], [0, 1], color='red', lw=2, linestyle='--', alpha=0.5)
+    ax2.set_xlim([0.0, 1.0])
+    ax2.set_ylim([0.0, 1.05])
+    ax2.set_xlabel('False Positive Rate')
+    ax2.set_ylabel('True Positive Rate')
+    ax2.set_title('ROC Curves - Cross-Validated Performance\n(Avoiding Overfitting)')
+    ax2.legend(loc="lower right")
+    ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.savefig(output_dir / 'roc_curves_cv.png', dpi=300, bbox_inches='tight')
@@ -376,7 +384,7 @@ def main():
     create_model_comparison_figure(results, output_dir)
     create_dataset_distribution_figure(df, output_dir)
     create_cross_patient_performance_figure(results, output_dir)
-    create_proper_roc_curves_figure(df, output_dir)
+    create_roc_curves_figure(df, output_dir)
     create_confusion_matrices_figure(df, output_dir)
     create_performance_metrics_figure(df, output_dir)
     
