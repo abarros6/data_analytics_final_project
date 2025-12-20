@@ -31,12 +31,19 @@ warnings.filterwarnings('ignore')
 def load_seizure_data():
     """Load the seizure prediction data"""
     try:
-        df = pd.read_csv('data/processed/seizure_prediction_data.csv')
+        # Try new larger dataset first
+        df = pd.read_csv('data/processed/seizure_data_60s.csv')
         print(f'✅ Loaded seizure data: {len(df)} windows from {df["subject_id"].nunique()} patients')
         return df
     except FileNotFoundError:
-        print('❌ Seizure data not found. Run seizure_data_processor.py first.')
-        return None
+        try:
+            # Fallback to original dataset
+            df = pd.read_csv('data/processed/seizure_prediction_data.csv')
+            print(f'✅ Loaded seizure data: {len(df)} windows from {df["subject_id"].nunique()} patients')
+            return df
+        except FileNotFoundError:
+            print('❌ Seizure data not found. Run seizure_data_processor.py first.')
+            return None
 
 def create_model_pipelines():
     """Create pipelines for different ML algorithms"""
