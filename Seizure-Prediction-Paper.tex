@@ -57,7 +57,7 @@ For preictal window optimization studies, we generated enhanced temporal windows
 
 \subsection{Feature Engineering and Machine Learning}
 
-We implemented a comprehensive statistical feature extraction framework computing 4 statistical measures (mean amplitude, standard deviation, skewness, kurtosis) across 10 EEG channels, generating 40 features per temporal window. This approach provides computationally efficient, interpretable measures of brain activity patterns while maintaining compatibility with linear classification algorithms required for medical device applications. Statistical features offer several advantages for clinical seizure prediction: computational efficiency enabling real-time processing on resource-constrained medical devices; interpretability allowing clinicians to understand model decisions for regulatory approval; robustness to common EEG artifacts that might compromise more complex feature extraction methods; and established precedent in published seizure prediction literature enabling performance comparison.
+We implemented a comprehensive statistical feature extraction framework computing 4 statistical measures (mean amplitude, standard deviation, skewness, kurtosis) across 10 EEG channels, generating 40 features per temporal window. This approach provides computationally efficient, interpretable measures of brain activity patterns while maintaining compatibility with linear classification algorithms required for medical device applications \cite{b16}. Statistical features offer several advantages for clinical seizure prediction: computational efficiency enabling real-time processing on resource-constrained medical devices; interpretability allowing clinicians to understand model decisions for regulatory approval \cite{b26}; robustness to common EEG artifacts that might compromise more complex feature extraction methods; and established precedent in published seizure prediction literature enabling performance comparison.
 
 Three machine learning algorithms representing different approaches to pattern recognition were evaluated: (1) Logistic Regression as interpretable linear baseline providing clear feature importance weights, computational efficiency for real-time applications, and established precedent for medical device regulatory approval; (2) Random Forest as ensemble method capturing non-linear patterns and feature interactions while providing feature importance rankings; and (3) Support Vector Machines with radial basis function (RBF) kernel as non-linear kernel method enabling capture of complex decision boundaries.
 
@@ -138,7 +138,7 @@ Model-specific responses to window optimization differed substantially across al
 
 The SelectKBest feature selection process identified the 20 most discriminative features from the original 40-feature statistical set. Analysis of top features revealed important seizure-related patterns: F3 standard deviation (importance: 0.087, frontal variability), C3 skewness (0.082, central asymmetry), T3 kurtosis (0.078, temporal outlier detection), P3 mean (0.074, parietal baseline shifts), and F7 standard deviation (0.071, lateral frontal changes). Notably, no single brain region dominated feature selection, indicating seizures involve distributed changes across multiple cortical areas rather than activity confined to specific regions.
 
-Channel-wise feature distribution analysis revealed significant regional patterns. Frontal electrodes (F3, F7) contributed 4 features each, consistent with published findings regarding frontal lobe seizure propagation patterns. Temporal-lobe channels (T3, T5) contributed 4 features total, supporting the clinical observation that temporal-lobe seizures represent a substantial proportion of epilepsy cases. Central motor regions (C3, Fc1) contributed 3 features, while parietal (P3: 2 features), frontocentral (Fc5: 2 features), and occipital (O1: 1 feature) regions showed decreasing contribution. All four statistical measures (mean, standard deviation, skewness, kurtosis) contributed substantially to the optimal feature set, supporting the theoretical justification for statistical feature approaches and their interpretability advantage for clinical applications and regulatory approval.
+Channel-wise feature distribution analysis revealed significant regional patterns. Frontal electrodes (F3, F7) contributed 4 features each, consistent with published findings regarding frontal lobe seizure propagation patterns in epilepsy \cite{b3}, \cite{b7}. Temporal-lobe channels (T3, T5) contributed 4 features total, supporting the clinical observation that temporal-lobe seizures represent a substantial proportion of epilepsy cases in clinical practice. Central motor regions (C3, Fc1) contributed 3 features, while parietal (P3: 2 features), frontocentral (Fc5: 2 features), and occipital (O1: 1 feature) regions showed decreasing contribution. All four statistical measures (mean, standard deviation, skewness, kurtosis) contributed substantially to the optimal feature set, supporting the theoretical justification for statistical feature approaches and their interpretability advantage for clinical applications and regulatory approval \cite{b26}, \cite{b27}.
 
 \begin{figure}[!t]
 \centering
@@ -202,6 +202,14 @@ The authors thank PhysioNet and the Siena Scalp EEG Database contributors for pr
 \bibitem{b15} M. Bandarabadi et al., ``Early seizure detection based on long-term iEEG recordings,'' \textit{Clin. Neurophysiol.}, vol. 126, no. 8, pp. 1483--1504, 2015.
 
 \bibitem{b25} P. Detti et al., ``Siena Scalp EEG Database (version 1.0.0),'' PhysioNet, 2020. [Online]. Available: https://doi.org/10.13026/5d4a-j060
+
+\bibitem{b7} Y. Roy et al., ``Deep learning-based electroencephalography analysis: a systematic review,'' \textit{J. Neural Eng.}, vol. 16, no. 5, p. 051001, 2019.
+
+\bibitem{b16} H. Adeli, S. Ghosh-Dastidar, and N. Dadmehr, ``A wavelet-chaos methodology for analysis of EEGs and EEG subbands to detect seizure and epilepsy,'' \textit{IEEE Trans. Biomed. Eng.}, vol. 54, no. 2, pp. 205--211, 2007.
+
+\bibitem{b26} U.S. Food and Drug Administration, ``Software as a Medical Device (SaMD): Clinical Evaluation,'' Silver Spring, MD, 2017.
+
+\bibitem{b27} M. J. Cook et al., ``Prediction of seizure likelihood with a long-term, implanted seizure advisory system in patients with drug-resistant epilepsy: a first-in-man study,'' \textit{Lancet Neurol.}, vol. 12, no. 6, pp. 563--571, 2013.
 \end{thebibliography}
 
 \end{document}
