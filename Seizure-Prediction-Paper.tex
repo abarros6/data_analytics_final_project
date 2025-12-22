@@ -41,7 +41,15 @@ Additionally, the temporal dynamics of seizure prediction require careful consid
 
 Published seizure prediction research demonstrates substantial variability in reported performance across studies. Studies report sensitivities ranging from 60--95\% and false positive rates from 0.1--2.0 per hour, though direct comparison between studies is challenging due to significant differences in datasets, evaluation methodology, patient populations, and prediction horizons \cite{b13}. A recent systematic review of 150 seizure prediction studies found that only 23\% used proper cross-validation methodology and fewer than 10\% provided sufficient detail for reproducibility, highlighting methodological concerns in the field \cite{b14}. The most rigorous studies using leave-one-patient-out cross-validation—the gold standard for assessing true generalization capability—typically report ROC-AUC values between 0.65--0.80 for cross-patient prediction, substantially lower than patient-specific models which can achieve 0.80--0.95 AUC \cite{b15}.
 
-\textbf{Identified Research Gap:} A critical gap exists between the long-term prediction focus (15+ minutes) prevalent in current literature and the immediate intervention requirements of clinical seizure management. Clinical seizure management protocols require intervention windows of: (1) 30 seconds--2 minutes for emergency medication administration (intranasal midazolam, rectal diazepam); (2) 2--5 minutes for patient safety positioning, airway management, and emergency service notification; and (3) 5+ minutes for status epilepticus prevention protocols. Existing literature focused on 15--60+ minute prediction horizons is designed to support medication optimization and lifestyle adjustments rather than emergency response. This study addresses this identified research gap by examining preictal window optimization at shorter time scales (30s--300s) directly relevant for immediate clinical intervention, complementing existing research focused on longer-term prediction horizons.
+\section*{Related Works}
+
+There have been many papers written on the topic of seizure prediction over the years. One such paper is the one the dataset used for this paper is from---EEG Synchronization Analysis for Seizure Prediction: A Study on Data of Noninvasive Recordings \cite{b10}. The research described by this paper created both an open source dataset for use in seizure prediction tasks and a seizure prediction method using a threshold-based classifier \cite{b10}. The research focuses on creating a patient-specific seizure prediction method based on detection of synchronization patterns in the EEG, and shows that features extracted by synchronization measures are able to detect preictal and ictal states and allow seizure prediction minutes before seizure onsets \cite{b10}. In their conclusions, the researchers propose the use of state-of-the-art classification algorithms in place of the simple threshold-based classifier, which our research aims to achieve.
+
+Another paper that highlights the importance of using AI for seizure prediction is Artificial Intelligence-Based Epileptic Seizure Prediction Strategies: A Review \cite{b11}. This paper details a variety of research papers and procedures on the use of AI for seizure prediction from 2020 through August 2025. The review describes many different strategies used for seizure prediction, including both Machine Learning (SVM, KNN, Decision Trees including Random Forest, Gradient Boost, XGBoost) and Deep Learning approaches (CNNs, RNNs, Transformer-based methods) \cite{b11}. Crucially, the review notes that papers covered use a variety of different Seizure Prediction Horizon (SPH) times, with papers using Decision Trees having SPHs that ranged from seconds to 75 minutes \cite{b11}.
+
+Another paper that experiments with the preictal time period is Optimization of Pre-Ictal Interval Time Period for Epileptic Seizure Prediction Using Temporal and Frequency Features \cite{b12}. This paper experiments using the XGBoost algorithm only, with a range of preictal intervals from 1 minute to 18 minutes \cite{b12}. Our paper tests a variety of algorithms (logistic regression, random forest, SVM) and experiments within a smaller range of preictal intervals (30 seconds--300 seconds).
+
+Our research offers an interesting contribution to the research field, as we focus on systematically experimenting with preictal window lengths across multiple algorithms. While most research papers only focus on certain window lengths, such as 30 seconds or 60 seconds, our research systematically compares results across multiple algorithms at different preictal window lengths. This systematic multi-algorithm approach within the clinically relevant shorter window range (30s--300s) provides insights into how different algorithms respond to varying prediction horizons. As noted in the Detti et al. dataset paper, the use of too long prediction intervals might increase prediction times too much, introducing uncertainty on the timing of suitable clinical actions such as positioning for safety \cite{b10}. Our work identifies that 120-second windows provide an optimal balance between prediction accuracy and clinically meaningful intervention time across multiple algorithms.
 
 \section{Methodology}
 
@@ -195,6 +203,12 @@ The authors thank PhysioNet and the Siena Scalp EEG Database contributors for pr
 
 \bibitem{b6} B. Schelter et al., ``Testing statistical significance of multivariate time series analysis techniques for epileptic seizure prediction,'' \textit{Chaos}, vol. 16, no. 1, p. 013108, 2006.
 
+\bibitem{b10} P. Detti, G. Vatti, and G. Z. M. de Lara, ``EEG synchronization analysis for seizure prediction: A study on data of noninvasive recordings,'' \textit{Processes}, vol. 8, no. 7, p. 846, 2020.
+
+\bibitem{b11} A. V. Perez-Sanchez et al., ``Artificial intelligence-based epileptic seizure prediction strategies: A review,'' \textit{AI}, vol. 6, no. 10, p. 274, 2025.
+
+\bibitem{b12} A. A. S. Gadda et al., ``Optimization of pre-ictal interval time period for epileptic seizure prediction using temporal and frequency features,'' \textit{Studies in Health Technology and Informatics}, vol. 302, pp. 232--236, 2023.
+
 \bibitem{b13} L. Kuhlmann et al., ``Seizure prediction—ready for a new era,'' \textit{Nat. Rev. Neurol.}, vol. 14, no. 10, pp. 618--630, 2018.
 
 \bibitem{b14} A. Burrello et al., ``Laelaps: An energy-efficient seizure detection algorithm from long-term human iEEG recordings without false alarms,'' in \textit{Design, Automation \& Test in Europe Conf.}, pp. 752--757, 2019.
@@ -210,6 +224,10 @@ The authors thank PhysioNet and the Siena Scalp EEG Database contributors for pr
 \bibitem{b26} U.S. Food and Drug Administration, ``Software as a Medical Device (SaMD): Clinical Evaluation,'' Silver Spring, MD, 2017.
 
 \bibitem{b27} M. J. Cook et al., ``Prediction of seizure likelihood with a long-term, implanted seizure advisory system in patients with drug-resistant epilepsy: a first-in-man study,'' \textit{Lancet Neurol.}, vol. 12, no. 6, pp. 563--571, 2013.
+
+\bibitem{b28} American Epilepsy Society, ``Sudden Unexpected Nocturnal Death in Epilepsy (SUDEP): Clinical Guidance and Seizure Management Protocols,'' Epilepsia, vol. 55, no. 10, pp. 1460--1465, 2014.
+
+\bibitem{b29} D. M. Treiman et al., ``A Comparison of Four Treatments for Generalized Convulsive Status Epilepticus,'' \textit{N. Engl. J. Med.}, vol. 339, no. 12, pp. 792--798, 1998.
 \end{thebibliography}
 
 \end{document}
