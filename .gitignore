@@ -166,7 +166,6 @@ output/
 *.png
 *.jpg
 *.jpeg
-*.pdf
 *.svg
 
 # Generated text outputs
